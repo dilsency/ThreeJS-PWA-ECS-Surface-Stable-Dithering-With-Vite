@@ -4,10 +4,13 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.m
 // ECS
 import {EntityComponent} from "../classes/ECS/entity_component.js";
 import { createFractalMaterial, createFractalMaterialFromSources } from "../shaders/Simple_FractalDithering.js";
-// Vite-style raw imports (bundles shader text at build time). Keep these so the
-// shader sources are available as strings without runtime fetch.
-import vertSource from "../shaders/Simple_FractalDithering.vert?raw";
-import fragSource from "../shaders/Simple_FractalDithering.frag?raw";
+// Removed Vite `?raw` static imports to avoid MIME/type module errors on
+// GitHub Pages. Shaders will be loaded at runtime via fetch as a safe fallback.
+// When a bundler inlines sources, `createFractalMaterialFromSources` can still
+// be used by passing explicit sources. For portability, we initialize these
+// to null so the runtime-fetch path is used by default.
+let vertSource = null;
+let fragSource = null;
 
 //
 export class EntityComponentTestCube extends EntityComponent
