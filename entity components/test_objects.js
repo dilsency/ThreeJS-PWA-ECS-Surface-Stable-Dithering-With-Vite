@@ -21,6 +21,9 @@ export class EntityComponentTestCube extends EntityComponent
     //
     #cube = null;
     #positionOffset = { x: 0, y: 0, z: 0 };
+    #size = { x: 1, y: 1, z: 1 };
+    #spin = true;
+    #lighting = false;
 
     //
     #nameLastLetterAsInt = null;
@@ -36,6 +39,18 @@ export class EntityComponentTestCube extends EntityComponent
         {
             this.#positionOffset = params.positionOffset;
         }
+        if(params.size != null)
+        {
+            this.#size = params.size;
+        }
+        if(params.spin != null)
+        {
+            this.#spin = params.spin;
+        }
+        if(params.lighting != null)
+        {
+            this.#lighting = params.lighting;
+        }
     }
 
      // lifecycle
@@ -48,7 +63,7 @@ export class EntityComponentTestCube extends EntityComponent
         this.#nameLastLetterAsInt = nameLastLetter.charCodeAt(0);
 
         //
-            const geometry = new THREE.BoxGeometry( 1, 1, 1 );
+            const geometry = new THREE.BoxGeometry( this.#size.x, this.#size.y, this.#size.z );
 
             const loader = new THREE.TextureLoader();
             // Resolve texture URL via import.meta.url so Vite will include the asset
@@ -79,22 +94,24 @@ export class EntityComponentTestCube extends EntityComponent
 
                 if (isVertString && isFragString && looksLikeSource(vertSource) && looksLikeSource(fragSource)) {
                     // Inlined shader sources (dev or bundle-inlined)
-                    material = createFractalMaterialFromSources(vertSource, fragSource, { map: texture, level: 3, shape: 9 });
+                    material = createFractalMaterialFromSources(vertSource, fragSource, { map: texture, level: 3, shape: 9, lighting: this.#lighting });
                 } else if (isVertString && isFragString) {
                     // Likely URLs emitted by the build. Use the runtime factory with explicit URLs.
-                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, vertUrl: vertSource, fragUrl: fragSource });
+                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, vertUrl: vertSource, fragUrl: fragSource });
                 } else {
                     // fallback: runtime fetch (works with any static server)
-                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9 });
+                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting });
                 }
             } catch (err) {
                 // If anything goes wrong, fall back to runtime-fetching factory.
                 console.warn('Shader raw import failed or unavailable, using runtime fetch fallback.', err);
-                material = await createFractalMaterial({ map: texture, level: 3, shape: 9 });
+                material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting });
             }
-            
+
 
             this.#cube = new THREE.Mesh(geometry, material);
+            this.#cube.castShadow = true;
+            this.#cube.receiveShadow = true;
             this.#params.scene.add(this.#cube);
 
             this.#cube.position.x += this.#positionOffset.x;
@@ -109,6 +126,7 @@ export class EntityComponentTestCube extends EntityComponent
     {
         // early return
         if (this.#cube == null) { return; }
+        if (!this.#spin) { return; }
 
         //
         this.#cube.rotation.y += timeDelta * (this.#nameLastLetterAsInt % 2 == 0 ? 1 : -1);

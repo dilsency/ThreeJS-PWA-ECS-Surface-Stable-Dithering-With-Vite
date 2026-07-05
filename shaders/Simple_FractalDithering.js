@@ -11,12 +11,51 @@ async function loadText(url) {
   return await r.text();
 }
 
+// opts.lighting: false (default) = unlit, dither driven by texture albedo only.
+//                true = dither driven by the scene's first directional light
+//                (half-lambert shading) combined with its shadow map.
+function buildMaterial(vertexShader, fragmentShader, opts) {
+  const ownUniforms = {
+    uMainTex: { value: opts.map || new THREE.Texture() },
+    uColor1: { value: new THREE.Vector4(0.2, 0.2, 0.098, 1.0) },
+    uColor2: { value: new THREE.Vector4(0.898, 1.0, 1.0, 1.0) },
+    uScale: { value: opts.scale ?? 3.5 },
+    uClamp: { value: opts.clamp ?? new THREE.Vector2(0.2, 1.0) },
+    uDotRadius: { value: opts.dotRadius ?? 0.8 },
+    uInputExposure: { value: opts.inputExposure ?? 1.0 },
+    uInputOffset: { value: opts.inputOffset ?? 0.0 },
+    uAASmoothness: { value: opts.aaSmoothness ?? 1.5 },
+    uAAStretch: { value: opts.aaStretch ?? 0.125 },
+    uLevel: { value: opts.level ?? 3 },
+    uQuantizeDots: { value: !!opts.quantizeDots },
+    uShape: { value: opts.shape ?? 0 }
+  };
+
+  // Three.js does not auto-merge its light/shadow uniforms into a custom
+  // ShaderMaterial's `uniforms` — with `lights: true` it expects them to
+  // already be present (it just assigns .value on them each frame), so we
+  // have to bring in UniformsLib.lights ourselves for the lit variant.
+  const uniforms = opts.lighting
+    ? THREE.UniformsUtils.merge([THREE.UniformsLib.lights, ownUniforms])
+    : ownUniforms;
+
+  return new THREE.ShaderMaterial({
+    vertexShader,
+    fragmentShader,
+    uniforms,
+    defines: opts.lighting ? { USE_LIGHTING: '' } : {},
+    lights: !!opts.lighting,
+    glslVersion: THREE.GLSL3,
+    transparent: false,
+  });
+}
+
 // Create material by fetching shader files relative to this module when not provided.
 // Options:
 // - map: THREE.Texture
 // - vertexShader / fragmentShader: strings (sources)
 // - vertUrl / fragUrl: URLs to fetch shader sources
-// Returns Promise<THREE.RawShaderMaterial>
+// Returns Promise<THREE.ShaderMaterial>
 export async function createFractalMaterial(opts = {}) {
 
     var vertSource = "";
@@ -41,56 +80,10 @@ export async function createFractalMaterial(opts = {}) {
     }
 
 
-  const uniforms = {
-    uMainTex: { value: opts.map || new THREE.Texture() },
-    uColor1: { value: new THREE.Vector4(0.2, 0.2, 0.098, 1.0) },
-    uColor2: { value: new THREE.Vector4(0.898, 1.0, 1.0, 1.0) },
-    uScale: { value: opts.scale ?? 3.5 },
-    uClamp: { value: opts.clamp ?? new THREE.Vector2(0.2, 1.0) },
-    uDotRadius: { value: opts.dotRadius ?? 0.8 },
-    uInputExposure: { value: opts.inputExposure ?? 1.0 },
-    uInputOffset: { value: opts.inputOffset ?? 0.0 },
-    uAASmoothness: { value: opts.aaSmoothness ?? 1.5 },
-    uAAStretch: { value: opts.aaStretch ?? 0.125 },
-    uLevel: { value: opts.level ?? 2 },
-    uQuantizeDots: { value: !!opts.quantizeDots },
-    uShape: { value: opts.shape ?? 0 }
-  };
-
-  const material = new THREE.RawShaderMaterial({
-    vertexShader: vertSource,
-    fragmentShader: fragSource,
-    uniforms,
-    glslVersion: THREE.GLSL3,
-    transparent: false,
-  });
-
-  return material;
+  return buildMaterial(vertSource, fragSource, opts);
 }
 
 // Synchronous helper when you already have shader sources as strings.
 export function createFractalMaterialFromSources(vertexSource, fragmentSource, opts = {}) {
-  const uniforms = {
-    uMainTex: { value: opts.map || new THREE.Texture() },
-    uColor1: { value: new THREE.Vector4(0.2, 0.2, 0.098, 1.0) },
-    uColor2: { value: new THREE.Vector4(0.898, 1.0, 1.0, 1.0) },
-    uScale: { value: opts.scale ?? 3.5 },
-    uClamp: { value: opts.clamp ?? new THREE.Vector2(0.2, 1.0) },
-    uDotRadius: { value: opts.dotRadius ?? 0.8 },
-    uInputExposure: { value: opts.inputExposure ?? 1.0 },
-    uInputOffset: { value: opts.inputOffset ?? 0.0 },
-    uAASmoothness: { value: opts.aaSmoothness ?? 1.5 },
-    uAAStretch: { value: opts.aaStretch ?? 0.125 },
-    uLevel: { value: opts.level ?? 2 },
-    uQuantizeDots: { value: !!opts.quantizeDots },
-    uShape: { value: opts.shape ?? 0 }
-  };
-
-  return new THREE.RawShaderMaterial({
-    vertexShader: vertexSource,
-    fragmentShader: fragmentSource,
-    uniforms,
-    glslVersion: THREE.GLSL3,
-    transparent: false,
-  });
+  return buildMaterial(vertexSource, fragmentSource, opts);
 }

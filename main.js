@@ -1,3 +1,9 @@
+// to update node.js
+//  https://stackoverflow.com/a/10076029/32604643
+//  tl;dr: n stable
+
+// https://dilsency.github.io/ThreeJS-PWA-ECS-Surface-Stable-Dithering-With-Vite/
+
 // imports
 // base
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js";// import * as THREE from "three";
@@ -12,6 +18,7 @@ import {EntityComponentPlayerController} from "./entity components/player_contro
 import {EntityComponentPlayerControllerInput} from "./entity components/player_controller.js";
 import {EntityComponentTestCube} from "./entity components/test_objects.js";
 import {EntityComponentButtonPointerLock} from "./entity components/test_objects.js";
+import {EntityComponentDirectionalLight} from "./entity components/lighting.js";
 
 // bare minimum
 var scene;
@@ -95,6 +102,8 @@ function init()
         renderer = new THREE.WebGLRenderer({ canvas, context });
         renderer.setSize( window.innerWidth, window.innerHeight );
         renderer.domElement.id = "canvas";
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         document.body.appendChild( renderer.domElement );
     }
 
@@ -130,8 +139,18 @@ function init()
         //
         const entityB = new Entity(null);
         entityManager.methodAddEntity(entityB);
-        entityB.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"model",}));
-        
+        entityB.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"model",lighting:true,}));
+
+        //
+        const entityGround = new Entity(null);
+        entityManager.methodAddEntity(entityGround);
+        entityGround.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"ground",lighting:true,spin:false,size:new THREE.Vector3(20,0.2,20),positionOffset:{x:0,y:-1.5,z:0},}));
+
+        //
+        const entityLight = new Entity(null);
+        entityManager.methodAddEntity(entityLight);
+        entityLight.methodAddComponentWithName("EntityComponentDirectionalLight", new EntityComponentDirectionalLight({scene:scene,position:new THREE.Vector3(5,8,5),target:new THREE.Vector3(0,0,0),}));
+
         //
         const entityC = new Entity(null);
         entityManager.methodAddEntity(entityC);
