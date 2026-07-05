@@ -29,6 +29,7 @@ export class EntityComponentTestCube extends EntityComponent
     #color2 = null;
     #color1Texture = false;
     #color2BlendTexture = false;
+    #textureFile = 'texture_checkerboard.png';
 
     //
     #nameLastLetterAsInt = null;
@@ -76,6 +77,10 @@ export class EntityComponentTestCube extends EntityComponent
         {
             this.#color2BlendTexture = params.color2BlendTexture;
         }
+        if(params.textureFile != null)
+        {
+            this.#textureFile = params.textureFile;
+        }
     }
 
      // lifecycle
@@ -93,12 +98,17 @@ export class EntityComponentTestCube extends EntityComponent
             const loader = new THREE.TextureLoader();
             // Resolve texture URL via import.meta.url so Vite will include the asset
             // in the build output. This works in dev and in the production build.
+            // Vite only statically bundles `new URL(literal, import.meta.url)` asset
+            // references for production builds, so each known texture file needs its
+            // own literal branch here rather than a dynamically-built path.
             let texUrl;
             try {
-                texUrl = new URL('../textures/texture_checkerboard.png', import.meta.url).href;
+                texUrl = this.#textureFile === 'texture_checkerboard_alphamask.png'
+                    ? new URL('../textures/texture_checkerboard_alphamask.png', import.meta.url).href
+                    : new URL('../textures/texture_checkerboard.png', import.meta.url).href;
             } catch (e) {
                 // Fallback: use path relative to server root
-                texUrl = 'textures/texture_checkerboard.png';
+                texUrl = 'textures/' + this.#textureFile;
             }
             const texture = await new Promise((res, rej) => loader.load(texUrl, res, undefined, rej));
 

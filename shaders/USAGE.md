@@ -66,6 +66,13 @@ Colors:
 - Pass `color1Texture: true` to use `map` itself (sampled at the surface UV) as the background instead of the flat `color1` — `color1` is then ignored. `color2` still applies to the dots/symbols.
 - Pass `color2BlendTexture: true` to blend each dot/symbol 50/50 with the texture color underneath it (`map`, at that UV) instead of drawing a flat `color2`.
 
+Limiting the dither pattern to certain regions:
+- `map`'s **alpha channel** doubles as a per-pixel dither mask: alpha `1` (the default for an opaque PNG with no alpha data) means "fully dithered", alpha `0` means "show the plain texture color instead, no dithering at all", and values in between blend the two. Paint alpha into `map` (e.g. in Photoshop/GIMP/Krita's channels panel) to carve out regions that stay plain.
+- This is a deliberate choice between two options:
+  1. **Texture alpha as the mask (what we use now).** Free — no new uniform, no new texture bind, no shader plumbing beyond one extra `mix()`. It's backward compatible: any existing opaque texture (like `texture_checkerboard.png`) has alpha `1` everywhere, so nothing changes until you deliberately paint transparency into it. The cost is that alpha is now spoken for — you can't also use it for real alpha-blended transparency on the same material.
+  2. **A dedicated grayscale mask texture (or a vertex-color channel).** More flexible — masking becomes fully independent of the diffuse texture and of transparency, and it's easier to author (paint it like any normal image, no channel-switching). The cost is a second texture sampler (or vertex attribute) and a bit more wiring in the material/shader.
+- We went with (1) because this project doesn't use alpha-blended transparency anywhere (`transparent: false`, and the shader always writes `outColor.a = 1.0`), so there's no existing feature to conflict with, and it ships with zero API surface added. If a mesh ever needs to be genuinely see-through *and* region-masked at the same time, that's the point to switch to (2) — split the mask into its own texture (or vertex colors) and free up alpha for real transparency.
+
 Notes:
 - If you use a bundler that supports importing raw text (e.g. Vite's `?raw`), you can fetch shader sources with that instead and use `createFractalMaterialFromSources(vertSource, fragSource, opts)`.
 

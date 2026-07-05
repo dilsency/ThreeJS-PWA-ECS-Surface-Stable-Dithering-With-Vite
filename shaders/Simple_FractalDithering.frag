@@ -191,7 +191,12 @@ vec4 CalculateFrequency_Rune(vec2 uv_DitherTex, vec4 screenPos, vec2 dx, vec2 dy
 
 void main() {
     // sample texture and compute luminance
-    vec3 tex = texture(uMainTex, vUv).rgb;
+    vec4 texSample = texture(uMainTex, vUv);
+    vec3 tex = texSample.rgb;
+    // the texture's alpha channel doubles as a per-region dither mask: 1 = fully
+    // dithered (the default for opaque textures with no alpha data), 0 = show the
+    // plain texture color untouched. See USAGE.md for why alpha was chosen here.
+    float ditherMask = texSample.a;
     float albedo = dot(vec3(0.299,0.587,0.114), tex);
 
     float luminance;
@@ -279,5 +284,9 @@ void main() {
         gammaColor2 = mix(gammaTex, gammaColor2, 0.5);
     }
     vec3 color = pow(mix(gammaColor1, gammaColor2, dots), vec3(2.2));
-    outColor = vec4(color, 1.0);
+
+    // gate the whole dithered look by the alpha-channel mask: regions with
+    // ditherMask < 1 fall back toward the plain texture color instead.
+    vec3 finalColor = mix(tex, color, ditherMask);
+    outColor = vec4(finalColor, 1.0);
 }
