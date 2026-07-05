@@ -24,6 +24,7 @@ export class EntityComponentTestCube extends EntityComponent
     #size = { x: 1, y: 1, z: 1 };
     #spin = true;
     #lighting = false;
+    #debugNormals = false;
 
     //
     #nameLastLetterAsInt = null;
@@ -50,6 +51,10 @@ export class EntityComponentTestCube extends EntityComponent
         if(params.lighting != null)
         {
             this.#lighting = params.lighting;
+        }
+        if(params.debugNormals != null)
+        {
+            this.#debugNormals = params.debugNormals;
         }
     }
 
@@ -94,18 +99,18 @@ export class EntityComponentTestCube extends EntityComponent
 
                 if (isVertString && isFragString && looksLikeSource(vertSource) && looksLikeSource(fragSource)) {
                     // Inlined shader sources (dev or bundle-inlined)
-                    material = createFractalMaterialFromSources(vertSource, fragSource, { map: texture, level: 3, shape: 9, lighting: this.#lighting });
+                    material = createFractalMaterialFromSources(vertSource, fragSource, { map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals });
                 } else if (isVertString && isFragString) {
                     // Likely URLs emitted by the build. Use the runtime factory with explicit URLs.
-                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, vertUrl: vertSource, fragUrl: fragSource });
+                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals, vertUrl: vertSource, fragUrl: fragSource });
                 } else {
                     // fallback: runtime fetch (works with any static server)
-                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting });
+                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals });
                 }
             } catch (err) {
                 // If anything goes wrong, fall back to runtime-fetching factory.
                 console.warn('Shader raw import failed or unavailable, using runtime fetch fallback.', err);
-                material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting });
+                material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals });
             }
 
 

@@ -142,6 +142,11 @@ function init()
         entityB.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"model",lighting:true,}));
 
         //
+        const entityBDebugNormals = new Entity(null);
+        entityManager.methodAddEntity(entityBDebugNormals);
+        entityBDebugNormals.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"modelDebugNormals",lighting:true,debugNormals:true,positionOffset:{x:2.5,y:0,z:0},}));
+
+        //
         const entityGround = new Entity(null);
         entityManager.methodAddEntity(entityGround);
         entityGround.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"ground",lighting:true,spin:false,size:new THREE.Vector3(20,0.2,20),positionOffset:{x:0,y:-1.5,z:0},}));

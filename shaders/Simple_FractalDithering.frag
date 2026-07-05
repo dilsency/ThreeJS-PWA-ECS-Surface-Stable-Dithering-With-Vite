@@ -28,6 +28,7 @@ uniform float uAAStretch;
 uniform int uLevel;
 uniform bool uQuantizeDots;
 uniform int uShape; // 0=circle,1=square,2=rhombus,3=pentagon,4=hexagon,5=octagon,6=star,7=moon,8=heart,9=cools
+uniform bool uDebugNormals; // USE_LIGHTING only: view-space mesh normal as RGB (matches THREE.MeshNormalMaterial), bypasses dithering
 
 // --- Bayer utilities (translated from HLSL) ---
 uint spreadBits(uint x) {
@@ -197,6 +198,12 @@ void main() {
         // Unity's single "main light" concept; getShadowMask() combines shadows
         // from all directional lights that cast them.
         vec3 N = normalize(vNormal);
+
+        if (uDebugNormals) {
+            outColor = vec4(N * 0.5 + 0.5, 1.0);
+            return;
+        }
+
         float shading = 0.0;
         #if NUM_DIR_LIGHTS > 0
         float ndotl = clamp(dot(N, directionalLights[0].direction), 0.0, 1.0);

@@ -28,7 +28,8 @@ function buildMaterial(vertexShader, fragmentShader, opts) {
     uAAStretch: { value: opts.aaStretch ?? 0.125 },
     uLevel: { value: opts.level ?? 3 },
     uQuantizeDots: { value: !!opts.quantizeDots },
-    uShape: { value: opts.shape ?? 0 }
+    uShape: { value: opts.shape ?? 0 },
+    uDebugNormals: { value: !!opts.debugNormals }
   };
 
   // Three.js does not auto-merge its light/shadow uniforms into a custom

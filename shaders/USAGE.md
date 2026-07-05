@@ -58,6 +58,7 @@ Lighting modes:
 - By default (`lighting` unset/false) the dither pattern is driven purely by the texture's albedo (unlit).
 - Pass `lighting: true` to instead drive it from the scene's first directional light (half-lambert `N·L`) combined with that light's shadow map, e.g. `createFractalMaterial({ map: texture, lighting: true })`.
 - For the lit mode to have any visible effect you also need, as usual in Three.js: a `THREE.DirectionalLight` added to the scene, `renderer.shadowMap.enabled = true` if you want shadows, the light's `castShadow = true`, and the mesh's `receiveShadow = true` (and `castShadow = true` on any occluders).
+- Pass `debugNormals: true` (only meaningful with `lighting: true`) to bypass the dithering and instead output the mesh's view-space normal as an RGB color (same convention as `THREE.MeshNormalMaterial`) — useful for checking that shading looks right before debugging the dither pattern on top of it.
 
 Notes:
 - If you use a bundler that supports importing raw text (e.g. Vite's `?raw`), you can fetch shader sources with that instead and use `createFractalMaterialFromSources(vertSource, fragSource, opts)`.
