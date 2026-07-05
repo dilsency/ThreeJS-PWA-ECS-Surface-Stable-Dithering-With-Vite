@@ -11,14 +11,25 @@ async function loadText(url) {
   return await r.text();
 }
 
+// Accepts a THREE.Color, THREE.Vector4, [r,g,b,(a)] array, hex number (0xff8800),
+// or CSS color string ("orange"); falls back to `fallback` (a THREE.Vector4) when unset.
+function toColorVec4(value, fallback) {
+  if (value == null) return fallback;
+  if (value.isVector4) return value;
+  if (value.isColor) return new THREE.Vector4(value.r, value.g, value.b, 1.0);
+  if (Array.isArray(value)) return new THREE.Vector4(value[0], value[1], value[2], value[3] ?? 1.0);
+  const c = new THREE.Color(value);
+  return new THREE.Vector4(c.r, c.g, c.b, 1.0);
+}
+
 // opts.lighting: false (default) = unlit, dither driven by texture albedo only.
 //                true = dither driven by the scene's first directional light
 //                (half-lambert shading) combined with its shadow map.
 function buildMaterial(vertexShader, fragmentShader, opts) {
   const ownUniforms = {
     uMainTex: { value: opts.map || new THREE.Texture() },
-    uColor1: { value: new THREE.Vector4(0.2, 0.2, 0.098, 1.0) },
-    uColor2: { value: new THREE.Vector4(0.898, 1.0, 1.0, 1.0) },
+    uColor1: { value: toColorVec4(opts.color1, new THREE.Vector4(0.2, 0.2, 0.098, 1.0)) },
+    uColor2: { value: toColorVec4(opts.color2, new THREE.Vector4(0.898, 1.0, 1.0, 1.0)) },
     uScale: { value: opts.scale ?? 3.5 },
     uClamp: { value: opts.clamp ?? new THREE.Vector2(0.2, 1.0) },
     uDotRadius: { value: opts.dotRadius ?? 0.8 },

@@ -60,6 +60,10 @@ Lighting modes:
 - For the lit mode to have any visible effect you also need, as usual in Three.js: a `THREE.DirectionalLight` added to the scene, `renderer.shadowMap.enabled = true` if you want shadows, the light's `castShadow = true`, and the mesh's `receiveShadow = true` (and `castShadow = true` on any occluders).
 - Pass `debugNormals: true` (only meaningful with `lighting: true`) to bypass the dithering and instead output the mesh's view-space normal as an RGB color (same convention as `THREE.MeshNormalMaterial`) — useful for checking that shading looks right before debugging the dither pattern on top of it.
 
+Colors:
+- `color1` is the background color shown where no dot/symbol appears (i.e. darker/lower-luminance areas); `color2` is the color of the dots/symbols themselves, which appear more densely as luminance increases.
+- Both accept a `THREE.Color`, a hex number (`0xff8800`), a CSS color string (`"orange"`), or an `[r, g, b, (a)]` array. Defaults match the original Unity shader (`color1`: dark olive, `color2`: near-white). Example: `createFractalMaterial({ map: texture, color1: 0x00008b, color2: 0xff8000 })`.
+
 Notes:
 - If you use a bundler that supports importing raw text (e.g. Vite's `?raw`), you can fetch shader sources with that instead and use `createFractalMaterialFromSources(vertSource, fragSource, opts)`.
 
