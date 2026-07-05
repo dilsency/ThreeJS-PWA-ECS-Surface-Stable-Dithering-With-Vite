@@ -63,6 +63,8 @@ Lighting modes:
 Colors:
 - `color1` is the background color shown where no dot/symbol appears (i.e. darker/lower-luminance areas); `color2` is the color of the dots/symbols themselves, which appear more densely as luminance increases.
 - Both accept a `THREE.Color`, a hex number (`0xff8800`), a CSS color string (`"orange"`), or an `[r, g, b, (a)]` array. Defaults match the original Unity shader (`color1`: dark olive, `color2`: near-white). Example: `createFractalMaterial({ map: texture, color1: 0x00008b, color2: 0xff8000 })`.
+- Pass `color1Texture: true` to use `map` itself (sampled at the surface UV) as the background instead of the flat `color1` — `color1` is then ignored. `color2` still applies to the dots/symbols.
+- Pass `color2BlendTexture: true` to blend each dot/symbol 50/50 with the texture color underneath it (`map`, at that UV) instead of drawing a flat `color2`.
 
 Notes:
 - If you use a bundler that supports importing raw text (e.g. Vite's `?raw`), you can fetch shader sources with that instead and use `createFractalMaterialFromSources(vertSource, fragSource, opts)`.

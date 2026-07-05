@@ -29,6 +29,8 @@ uniform int uLevel;
 uniform bool uQuantizeDots;
 uniform int uShape; // 0=circle,1=square,2=rhombus,3=pentagon,4=hexagon,5=octagon,6=star,7=moon,8=heart,9=cools
 uniform bool uDebugNormals; // USE_LIGHTING only: view-space mesh normal as RGB (matches THREE.MeshNormalMaterial), bypasses dithering
+uniform bool uColor1UseTexture; // when true, sample uMainTex for the background (color1) instead of the uColor1 solid color
+uniform bool uColor2BlendTexture; // when true, each dot/symbol blends 50/50 with the texture color underneath it instead of a flat uColor2
 
 // --- Bayer utilities (translated from HLSL) ---
 uint spreadBits(uint x) {
@@ -268,8 +270,14 @@ void main() {
     float dots = AA_SDF(minSDF, smoothness + grazingSmoothing);
 
     // lerp in perceptual (gamma) space, matching Unity's Gamma22ToLinear(lerp(LinearToGamma22(...)))
-    vec3 gammaColor1 = pow(max(uColor1.rgb, vec3(0.0)), vec3(1.0 / 2.2));
+    vec3 color1Rgb = uColor1UseTexture ? tex : uColor1.rgb;
+    vec3 gammaColor1 = pow(max(color1Rgb, vec3(0.0)), vec3(1.0 / 2.2));
     vec3 gammaColor2 = pow(max(uColor2.rgb, vec3(0.0)), vec3(1.0 / 2.2));
+    if (uColor2BlendTexture) {
+        // blend each dot/symbol with the texture color underneath it, instead of a flat color2
+        vec3 gammaTex = pow(max(tex, vec3(0.0)), vec3(1.0 / 2.2));
+        gammaColor2 = mix(gammaTex, gammaColor2, 0.5);
+    }
     vec3 color = pow(mix(gammaColor1, gammaColor2, dots), vec3(2.2));
     outColor = vec4(color, 1.0);
 }
