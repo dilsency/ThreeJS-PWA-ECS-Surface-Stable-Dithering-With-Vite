@@ -30,6 +30,7 @@ export class EntityComponentTestCube extends EntityComponent
     #color1Texture = false;
     #color2BlendTexture = false;
     #textureFile = 'texture_checkerboard.png';
+    #shape = 0; // 0=circle,1=square,2=rhombus,3=pentagon,4=hexagon,5=octagon,6=star,7=moon,8=heart,9=cools
 
     //
     #nameLastLetterAsInt = null;
@@ -81,6 +82,10 @@ export class EntityComponentTestCube extends EntityComponent
         {
             this.#textureFile = params.textureFile;
         }
+        if(params.shape != null)
+        {
+            this.#shape = params.shape;
+        }
     }
 
      // lifecycle
@@ -129,18 +134,18 @@ export class EntityComponentTestCube extends EntityComponent
 
                 if (isVertString && isFragString && looksLikeSource(vertSource) && looksLikeSource(fragSource)) {
                     // Inlined shader sources (dev or bundle-inlined)
-                    material = createFractalMaterialFromSources(vertSource, fragSource, { map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture });
+                    material = createFractalMaterialFromSources(vertSource, fragSource, { map: texture, level: 3, shape: this.#shape, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture });
                 } else if (isVertString && isFragString) {
                     // Likely URLs emitted by the build. Use the runtime factory with explicit URLs.
-                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture, vertUrl: vertSource, fragUrl: fragSource });
+                    material = await createFractalMaterial({ map: texture, level: 3, shape: this.#shape, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture, vertUrl: vertSource, fragUrl: fragSource });
                 } else {
                     // fallback: runtime fetch (works with any static server)
-                    material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture });
+                    material = await createFractalMaterial({ map: texture, level: 3, shape: this.#shape, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture });
                 }
             } catch (err) {
                 // If anything goes wrong, fall back to runtime-fetching factory.
                 console.warn('Shader raw import failed or unavailable, using runtime fetch fallback.', err);
-                material = await createFractalMaterial({ map: texture, level: 3, shape: 9, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture });
+                material = await createFractalMaterial({ map: texture, level: 3, shape: this.#shape, lighting: this.#lighting, debugNormals: this.#debugNormals, color1: this.#color1, color2: this.#color2, color1Texture: this.#color1Texture, color2BlendTexture: this.#color2BlendTexture });
             }
 
 
