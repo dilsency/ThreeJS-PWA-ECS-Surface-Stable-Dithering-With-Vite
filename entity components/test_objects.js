@@ -159,7 +159,7 @@ export class EntityComponentTestCube extends EntityComponent
             this.#cube.position.z += this.#positionOffset.z;
 
             this.methodRegisterInvokableHandler('update.position', (paramMessage) =>{ this.methodHandleUpdatePosition(paramMessage); });
-        
+
     }
 
     methodUpdate(timeElapsed, timeDelta)
@@ -172,11 +172,50 @@ export class EntityComponentTestCube extends EntityComponent
         this.#cube.rotation.y += timeDelta * (this.#nameLastLetterAsInt % 2 == 0 ? 1 : -1);
     }
 
+    // getters
+
+    methodGetCube(){return this.#cube;}
+
     // handlers
 
     methodHandleUpdatePosition(paramMessage)
     {
         this.#cube.position.copy(paramMessage.invokableHandlerValue);
+    }
+}
+
+//
+export class EntityComponentTestCubeHUD extends EntityComponentTestCube
+{
+    #positionOffsetY = 0;
+    #tiltFactor = 0;
+
+    // construct
+    constructor(params)
+    {
+        super(params);
+
+        //
+        if(params.positionOffset != null && params.positionOffset.y != null)
+        {
+            this.#positionOffsetY = params.positionOffset.y;
+        }
+        if(params.tiltFactor != null)
+        {
+            this.#tiltFactor = params.tiltFactor;
+        }
+    }
+
+     // lifecycle
+
+    async methodInitialize()
+    {
+        await super.methodInitialize();
+
+        // Crude approximation of "face the camera": rather than an exact lookAt (which
+        // aims at the camera's single point rather than the frustum ray through this
+        // spot), just tilt down proportionally to how far below center it sits.
+        this.methodGetCube().rotation.x += this.#positionOffsetY * this.#tiltFactor;
     }
 }
 

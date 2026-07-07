@@ -17,6 +17,7 @@ import {EntityComponentCameraControllerFirstPersonInput} from "./entity componen
 import {EntityComponentPlayerController} from "./entity components/player_controller.js";
 import {EntityComponentPlayerControllerInput} from "./entity components/player_controller.js";
 import {EntityComponentTestCube} from "./entity components/test_objects.js";
+import {EntityComponentTestCubeHUD} from "./entity components/test_objects.js";
 import {EntityComponentButtonPointerLock} from "./entity components/test_objects.js";
 import {EntityComponentDirectionalLight} from "./entity components/lighting.js";
 
@@ -189,9 +190,10 @@ function init()
 
         const entityHUD = new Entity(null);
         entityManager.methodAddEntity(entityHUD);
-        entityHUD.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:sceneHUD,name:"model",
-            //positionOffset:{x:-3.0,y:-1.5,z:-3.0},
-            positionOffset:{x:-0,y:-0,z:-10.0},
+        entityHUD.methodAddComponentWithName("EntityComponentTestCubeHUD", new EntityComponentTestCubeHUD({scene:sceneHUD,name:"model",
+            positionOffset:{x:0.0,y:-1.5,z:-2.0},
+            tiltFactor:0.265,
+            spin:false,
             shape:7,
         }));
     }
