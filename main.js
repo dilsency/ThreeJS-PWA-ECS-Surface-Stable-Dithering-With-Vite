@@ -229,6 +229,7 @@ function update()
     // must be last
     renderer.render(scene, camera);
     renderer.autoClear = false;
+    renderer.clearDepth(); // HUD always draws on top of `scene` — see HUD_DEPTH_CLEARING.md
     renderer.render(sceneHUD, cameraHUD);
 }
 
