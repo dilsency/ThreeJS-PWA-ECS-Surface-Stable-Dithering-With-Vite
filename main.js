@@ -18,8 +18,10 @@ import {EntityComponentPlayerController} from "./entity components/player_contro
 import {EntityComponentPlayerControllerInput} from "./entity components/player_controller.js";
 import {EntityComponentTestCube} from "./entity components/test_objects.js";
 import {EntityComponentTestCubeHUD} from "./entity components/test_objects.js";
+import {EntityComponentBackgroundPlane} from "./entity components/test_objects.js";
 import {EntityComponentButtonPointerLock} from "./entity components/test_objects.js";
 import {EntityComponentDirectionalLight} from "./entity components/lighting.js";
+import {EntityComponentLightManager} from "./entity components/lighting.js";
 
 // bare minimum
 var scene;
@@ -126,7 +128,7 @@ function init()
 
         //
         const entityA = new Entity(null);
-        entityManager.methodAddEntity(entityA);
+        entityManager.methodAddEntity(entityA, "player");
         //
         entityA.methodAddComponentWithName("EntityComponentCameraControllerFirstPerson", new EntityComponentCameraControllerFirstPerson({scene: scene, camera: camera, cameraPivot: cameraPivot,}));
         entityA.methodAddComponentWithName("EntityComponentCameraControllerFirstPersonInput", new EntityComponentCameraControllerFirstPersonInput());
@@ -139,62 +141,86 @@ function init()
 
         //
         const entityB = new Entity(null);
-        entityManager.methodAddEntity(entityB);
+        entityManager.methodAddEntity(entityB, "cubeCircle");
         entityB.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"model",lighting:true,shape:0,}));
 
         //
         const entityBDebugNormals = new Entity(null);
-        entityManager.methodAddEntity(entityBDebugNormals);
+        entityManager.methodAddEntity(entityBDebugNormals, "cubeDebugNormals");
         entityBDebugNormals.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"modelDebugNormals",lighting:true,debugNormals:true,positionOffset:{x:2.5,y:0,z:0},shape:1,}));
 
         //
         const entityCubeC = new Entity(null);
-        entityManager.methodAddEntity(entityCubeC);
+        entityManager.methodAddEntity(entityCubeC, "cubeC");
         entityCubeC.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"CubeC",lighting:true,positionOffset:{x:-2.5,y:0,z:0},color1:0x00008b,color2:0xff8000,shape:2,}));
 
         //
         const entityCubeD = new Entity(null);
-        entityManager.methodAddEntity(entityCubeD);
+        entityManager.methodAddEntity(entityCubeD, "cubeD");
         entityCubeD.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"CubeD",lighting:true,positionOffset:{x:5,y:0,z:0},color1Texture:true,color2:0xff0000,shape:3,}));
 
         //
         const entityCubeE = new Entity(null);
-        entityManager.methodAddEntity(entityCubeE);
+        entityManager.methodAddEntity(entityCubeE, "cubeE");
         entityCubeE.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"CubeE",lighting:true,positionOffset:{x:7.5,y:0,z:0},color1Texture:true,color2BlendTexture:true,color2:0xff0000,shape:4,}));
 
         //
         const entityCubeF = new Entity(null);
-        entityManager.methodAddEntity(entityCubeF);
+        entityManager.methodAddEntity(entityCubeF, "cubeF");
         entityCubeF.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"CubeF",lighting:true,positionOffset:{x:10,y:0,z:0},color1Texture:true,color2:0xff0000,textureFile:'texture_checkerboard_alphamask.png',shape:5,}));
 
         //
         const entityGround = new Entity(null);
-        entityManager.methodAddEntity(entityGround);
+        entityManager.methodAddEntity(entityGround, "ground");
         entityGround.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"ground",lighting:true,spin:false,size:new THREE.Vector3(20,0.2,20),positionOffset:{x:0,y:-1.5,z:0},shape:6,}));
 
         //
         const entityLight = new Entity(null);
-        entityManager.methodAddEntity(entityLight);
-        entityLight.methodAddComponentWithName("EntityComponentDirectionalLight", new EntityComponentDirectionalLight({scene:scene,position:new THREE.Vector3(5,8,5),target:new THREE.Vector3(0,0,0),}));
+        entityManager.methodAddEntity(entityLight, "sun");
+        const componentLightWorld = new EntityComponentDirectionalLight({scene:scene,position:new THREE.Vector3(5,8,5),target:new THREE.Vector3(0,0,0),});
+        entityLight.methodAddComponentWithName("EntityComponentDirectionalLight", componentLightWorld);
+        entityLight.methodAddComponentWithName("EntityComponentTestCube", new EntityComponentTestCube({scene:scene,name:"CubeG",lighting:true,positionOffset:{x:5,y:8,z:5},color1Texture:false,color2:0xffFF00,textureFile:'texture_checkerboard_alphamask.png',shape:5,}));
 
         //
         const entityC = new Entity(null);
-        entityManager.methodAddEntity(entityC);
+        entityManager.methodAddEntity(entityC, "pointerLockButton");
         entityC.methodAddComponentWithName("EntityComponentButtonPointerLock", new EntityComponentButtonPointerLock({document:document,renderer:renderer,}));
-        
+
         const entityD = new Entity(null);
-        entityManager.methodAddEntity(entityD);
+        entityManager.methodAddEntity(entityD, "testEntityPositionOnly");
         entityD.methodSetPosition({x:-10,y:0,z:-10,});
 
         // sceneHUD
 
         const entityHUD = new Entity(null);
-        entityManager.methodAddEntity(entityHUD);
-        entityHUD.methodAddComponentWithName("EntityComponentTestCubeHUD", new EntityComponentTestCubeHUD({scene:sceneHUD,name:"model",
+        entityManager.methodAddEntity(entityHUD, "hudPanel");
+        entityHUD.methodAddComponentWithName("EntityComponentBackgroundPlane", new EntityComponentBackgroundPlane({scene:sceneHUD,
+            positionOffset:{x:0.0,y:-1.5,z:-2.2},
+        }));
+        const componentCubeHUD = new EntityComponentTestCubeHUD({scene:sceneHUD,name:"model",
             positionOffset:{x:0.0,y:-1.5,z:-2.0},
             tiltFactor:0.265,
             spin:false,
+            lighting:true,
             shape:7,
+        });
+        entityHUD.methodAddComponentWithName("EntityComponentTestCubeHUD", componentCubeHUD);
+
+        //
+        // Kept lit like the world scene's "sun" via EntityComponentLightManager below
+        // rather than hardcoded matching params — initial position/target here only
+        // matter until the first methodUpdate() tick synchronizes them. sceneHUD has
+        // nothing worth casting/receiving a shadow map, so castShadow is off here.
+        const entityLightHUD = new Entity(null);
+        entityManager.methodAddEntity(entityLightHUD, "hudSun");
+        entityLightHUD.methodAddComponentWithName("EntityComponentDirectionalLight", new EntityComponentDirectionalLight({scene:sceneHUD,position:new THREE.Vector3(5,8,5),target:new THREE.Vector3(0,0,0),castShadow:false,}));
+        entityLightHUD.methodAddComponentWithName("EntityComponentLightManager", new EntityComponentLightManager({
+            source:componentLightWorld,
+            sourceReferencePoint:camera, // main scene camera: the sun's offset is measured from here
+            targetReferencePoint:componentCubeHUD, // HUD cube: the same offset is re-applied from here
+            // facing the sun head-on should fully light the HUD cube's near (camera-facing)
+            // side, not its far side — see EntityComponentLightManager's field comment.
+            reverseDirection:true,
         }));
     }
 

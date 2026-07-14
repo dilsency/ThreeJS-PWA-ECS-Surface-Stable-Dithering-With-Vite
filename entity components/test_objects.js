@@ -220,6 +220,107 @@ export class EntityComponentTestCubeHUD extends EntityComponentTestCube
 }
 
 //
+export class EntityComponentBackgroundPlane extends EntityComponent
+{
+    // bare minimum
+    #params = null;
+
+    //
+    #plane = null;
+    #positionOffset = { x: 0, y: 0, z: 0 };
+    #size = { width: 2.5, height: 2.5 };
+    #color = 0x87ceeb; // sky blue
+    #textureFile = null;
+
+    // construct
+    constructor(params)
+    {
+        super(params);
+        this.#params = params;
+
+        //
+        if(params.positionOffset != null)
+        {
+            this.#positionOffset = params.positionOffset;
+        }
+        if(params.size != null)
+        {
+            this.#size = params.size;
+        }
+        if(params.color != null)
+        {
+            this.#color = params.color;
+        }
+        if(params.textureFile != null)
+        {
+            this.#textureFile = params.textureFile;
+        }
+    }
+
+    // lifecycle
+
+    async methodInitialize()
+    {
+        //
+        const geometry = new THREE.PlaneGeometry(this.#size.width, this.#size.height);
+
+        // unlit flat color/texture: this plane is meant as a static backdrop,
+        // and the scene it's used in (sceneHUD) has no lights anyway.
+        var texture = null;
+        if(this.#textureFile != null)
+        {
+            const loader = new THREE.TextureLoader();
+            // Vite only statically bundles `new URL(literal, import.meta.url)` asset
+            // references at build time, so each known texture file needs its own
+            // literal branch here rather than a dynamically-built path (see
+            // DEPLOY_GITHUB_PAGES.md and EntityComponentTestCube).
+            let texUrl;
+            try {
+                texUrl = this.#textureFile === 'texture_checkerboard_alphamask.png'
+                    ? new URL('../textures/texture_checkerboard_alphamask.png', import.meta.url).href
+                    : this.#textureFile === 'texture_checkerboard.png'
+                    ? new URL('../textures/texture_checkerboard.png', import.meta.url).href
+                    : new URL('../textures/texture.png', import.meta.url).href;
+            } catch (e) {
+                texUrl = 'textures/' + this.#textureFile;
+            }
+            texture = await new Promise((res, rej) => loader.load(texUrl, res, undefined, rej));
+        }
+
+        //
+        const material = new THREE.MeshBasicMaterial({
+            color: this.#color,
+            map: texture,
+        });
+
+        //
+        this.#plane = new THREE.Mesh(geometry, material);
+        this.#params.scene.add(this.#plane);
+
+        this.#plane.position.x += this.#positionOffset.x;
+        this.#plane.position.y += this.#positionOffset.y;
+        this.#plane.position.z += this.#positionOffset.z;
+
+        this.methodRegisterInvokableHandler('update.position', (paramMessage) => { this.methodHandleUpdatePosition(paramMessage); });
+    }
+
+    methodUpdate(timeElapsed, timeDelta)
+    {
+    }
+
+    // getters
+
+    methodGetPlane(){return this.#plane;}
+
+    // handlers
+
+    methodHandleUpdatePosition(paramMessage)
+    {
+        this.#plane.position.copy(paramMessage.invokableHandlerValue);
+    }
+}
+
+//
 export class EntityComponentButtonPointerLock extends EntityComponent
 {
     // bare minimum
