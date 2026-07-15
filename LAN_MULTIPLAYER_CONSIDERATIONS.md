@@ -1,13 +1,20 @@
 # LAN multiplayer — considerations so far
 
-Status: brainstorm only. Nothing in this document is implemented. No networking
-code exists in this project yet.
+Status: decisions below are made for a two-phase plan; nothing is implemented
+yet. No networking code exists in this project yet.
 
-## The goal
+## The goal (long-term)
 
 Seamless, LAN-only multiplayer: two people on the same WiFi should see each other
-appear automatically the moment the second person loads the GitHub Pages URL — no
-room codes, no manual pairing, no special input from either player.
+appear automatically the moment the second person loads the game — no room codes,
+no manual pairing, no special input from either player.
+
+That full goal turned out to need either a second external service stacked on top
+of PeerJS (for browser-based auto-matchmaking) or a native app (for true
+zero-extra-service broadcast discovery) — see below. Decision: **pursue the
+native PC app as the real long-term vehicle for this goal**, and use a much
+simpler browser-based version first, explicitly *not* seamless, purely to get
+the actual multiplayer sync mechanics built and tested quickly.
 
 ## The core constraint: browsers can't do LAN discovery
 
@@ -43,30 +50,80 @@ candidates — a few KB of text) gets from one browser to the other. That exchan
 needs *some* rendezvous point reachable by both browsers before the direct
 connection can be established. Three options were considered:
 
-### 1. External relay + public-IP auto-pairing (the chosen starting point)
+### 1. External relay via PeerJS
 
-A minimal external service (e.g. **PeerJS's public cloud broker**, or a
-self-hosted equivalent such as a small **Cloudflare Worker** using Durable
-Objects, or Firebase/Supabase realtime) does nothing but pass that one small
-handshake blob between two waiting clients. Gameplay data never touches it.
+**PeerJS** wraps WebRTC and ships a free public broker (`0.peerjs.com`) built
+exactly for this: anonymous, no account, no API key, no cost.
 
-Auto-pairing without room codes: group waiting clients by the **public IP address
-the relay sees them connect from** — devices on the same home WiFi share the same
-router's public IP, so this naturally pairs "people on this WiFi" without any
-manual step. (Caveat: over-groups on big shared NATs — offices, campus WiFi, some
-carrier-grade NAT ISPs — where "same public IP" doesn't mean "same LAN.")
+```js
+const peer = new Peer(); // connects anonymously to PeerJS's public cloud broker
+peer.on('open', (myId) => { /* got a random ID */ });
+peer.on('connection', (conn) => { /* someone connected to us */ });
+```
 
-Why this can be free: bandwidth/compute needed is tiny (a few KB per pairing
-event, no persistent game state), which is exactly the profile free tiers of
-serverless/broker platforms are built around. Self-hosting your own tiny relay
-(vs. depending on PeerJS's shared public one) trades a little setup effort for
-full control and no shared rate limits with other PeerJS users worldwide.
+That gives the WebRTC connection/data-channel layer for free, with zero signup —
+but it's only "connect two *known* IDs." It has no built-in matchmaking (the
+public broker doesn't let clients list who else is connected, deliberately, for
+the same abuse-prevention reason browsers don't expose LAN discovery). Getting
+from "connect two known IDs" to "automatically pair people on the same WiFi"
+needs one of:
 
-**Tradeoff:** zero install for either player, works across any home network
-without local firewall friction, not fragile to browser Private Network Access
-changes (it's a normal outbound WSS connection, not a private-IP probe) — at the
-cost of a brief, genuine internet touch for the handshake only, and dependency on
-a third party's continued uptime/terms (mitigated by self-hosting).
+**1a. Manual one-time code (chosen for the v1 browser build).** The "host"
+player's `Peer` ID (or a short code derived from it) is shown on screen; the
+joining player types/pastes it in, and calls `peer.connect(code)`. Zero accounts
+anywhere, zero extra infrastructure beyond PeerJS's already-free public broker —
+just not automatic. This is the deliberate, accepted tradeoff for now: it lets
+the actual multiplayer sync (the ECS networking components, state
+reconciliation, etc.) get built and tested immediately, without first building or
+depending on any matchmaking layer. The web version stays explicitly a testing
+tool under this plan, not the seamless experience described in "the goal."
+
+**1b. Automatic public-IP pairing (deferred, not part of the v1 plan).** Group
+waiting clients by the **public IP address a relay sees them connect from** —
+devices on the same home WiFi share their router's public IP, so this pairs
+"people on this WiFi" with no manual step. The catch that ruled this out for now:
+PeerJS's public broker doesn't do this grouping itself, so it needs a *separate*
+small matchmaking service (e.g. Firebase Realtime Database, or a self-hosted
+broker on a free-tier host) to track who's waiting.
+
+Concretely, what Firebase specifically would have been used for: a tiny
+realtime key-value store sitting *alongside* PeerJS, not replacing it. The flow
+would have been something like:
+
+1. Each client writes a small record — its PeerJS ID, a timestamp, and its own
+   detected public IP — to a `waiting/` path in Firebase (Realtime Database or
+   Firestore).
+2. Each client also subscribes to a realtime query for *other* `waiting/`
+   entries matching its own public IP. Firebase's realtime listeners (not
+   polling) mean the moment a second device on the same WiFi writes its entry,
+   the first device gets pushed that update instantly.
+3. On a match, each side reads the other's PeerJS ID from that record and calls
+   `peer.connect(otherPeerId)` — at which point Firebase's job is done and the
+   actual connection/gameplay traffic is all PeerJS/WebRTC, exactly as in 1a.
+4. Security rules would need to scope reads so a client can only query entries
+   matching *its own* public IP, not enumerate every waiting player globally —
+   otherwise the matchmaking data itself becomes a way to see who's currently
+   waiting to play, from anywhere.
+
+Worth noting this likely wouldn't have stopped at just one extra service either:
+a browser client doesn't inherently know its own public IP (Firebase's client
+SDK doesn't expose the caller's IP to the caller), so step 1 would probably need
+either a dedicated IP-echo lookup (e.g. a call to a service like `ipify` — a
+*third* external dependency) or reusing the public ("server reflexive") address
+a STUN server already reveals during ordinary WebRTC ICE gathering (STUN is at
+least already inherent to how WebRTC establishes connections, so it's more
+"infrastructure already in the mix" than "a new service," but it's still another
+moving part). Either way, this is exactly the "stacking" the decision below
+rejects — the objection was never about accounts or cost (PeerJS's own broker
+needs neither), it's specifically **not wanting to depend on a second external
+service on top of PeerJS**, and this Firebase-based approach could easily have
+needed a third. That's exactly why the native PC app (below) became the real
+target for the seamless experience instead: it gets automatic discovery with
+*zero* external services of any kind, rather than trading one dependency for two
+or three.
+
+**Tradeoff (1a vs. native app):** works in any browser, zero install, right now —
+at the cost of not being seamless (one manual code entry per session).
 
 ### 2. Local companion process (considered, not chosen)
 
@@ -90,13 +147,48 @@ for a broadcast. This can work today, but:
 the LAN, at the cost of setup asymmetry, more code, and long-term fragility as
 browser security policy keeps tightening in this exact area.
 
-### 3. Full native app (Electron/Tauri) — not pursued now, but the natural upgrade path
+### 3. Full native app (Electron/Tauri) — chosen as the long-term direction
 
-A native shell gives real OS-level socket access, so genuine broadcast-based
-discovery (no signaling step needed at all, console-style) becomes
-straightforward — but it also means the project stops being "just visit a URL,"
-which cuts against the current goal. Notably, this does **not** require
-discarding a PeerJS-based implementation; see below.
+A native shell gives real OS-level socket access, which removes the whole
+matchmaking problem rather than working around it: no signaling, no relay, no
+external service of any kind, anywhere. This is the reason it won out over
+pushing further on browser-based auto-pairing (1b) — that path's only way to get
+"automatic" was to stack a second external service on top of PeerJS, which is
+explicitly off the table, whereas the native app gets genuine automatic discovery
+with *zero* external dependencies at all — not even PeerJS.
+
+Concretely:
+
+- **Electron**: the renderer (Three.js/web code) doesn't get raw sockets
+  directly; Node's `dgram` module lives in the **main process**, which opens a
+  UDP socket, enables broadcast, and periodically sends/listens for a small
+  "here I am" packet on the subnet. The discovered peer's IP is handed to the
+  renderer via `contextBridge`/`ipcRenderer`.
+- **Tauri**: same shape, but the native side is Rust (`std::net::UdpSocket`),
+  exposed to the frontend via `invoke`/events. Tauri bundles are much smaller (no
+  bundled Chromium; uses the OS's native WebView) at the cost of that native-side
+  code being Rust rather than JS.
+- Once two machines know each other's IP, gameplay sync can ride that same UDP
+  socket, or a second dedicated one — a direct LAN connection, no NAT traversal
+  needed since there's no NAT in the way locally.
+
+**Real friction points, so this isn't oversold:**
+- A one-time OS firewall prompt on *both* players' machines (discovery is
+  symmetric here, unlike option 2's single "host") the first time each app opens
+  a listening socket.
+- Distributing an unsigned build triggers "Unknown publisher"/SmartScreen on
+  Windows and is blocked by Gatekeeper by default on macOS (a right-click-to-open
+  workaround exists). Proper code signing costs real money (a certificate, or
+  Apple's $99/year developer program) — this is the native-app equivalent of a
+  recurring cost, though entirely skippable if both players are fine clicking
+  through a warning once.
+- Broadcast discovery assumes a normal home-router subnet; it won't cross VLANs
+  and fails on networks with client/AP isolation enabled (common on guest WiFi,
+  some mesh systems) — a limitation inherent to *any* same-network discovery
+  approach, not specific to this implementation.
+
+This does **not** require discarding the PeerJS-based v1 implementation — see
+"Future path" below for how the two coexist.
 
 ### Nintendo Switch — considered and ruled out as a near-term target
 
@@ -160,10 +252,65 @@ want to receive WiFi multicast/broadcast traffic need to explicitly acquire a
 battery — a well-documented API, not a platform-level blocker like the browser
 sandbox is.
 
-## Decision: start with the PeerJS approach
+## Decision: two phases
 
-Zero install for either player, fits the existing "just visit the GitHub Pages
-link" model, and — per the next section — doesn't box out a native version later.
+**Phase 1 (v1, starting now): PeerJS in the browser, with a manual one-time
+code (option 1a).** Explicitly not seamless, not inputless — the joining player
+types in a code. Chosen anyway because it needs zero accounts, zero extra
+infrastructure, and no native app work, so it's the fastest way to get the actual
+multiplayer sync mechanics (ECS networking components, state sync/reconciliation)
+built and tested against a real second player. It's a testing tool, not the
+end-state described in "the goal."
+
+**Phase 2 (later): the native PC app (option 3), with native broadcast
+discovery.** This is the real vehicle for "the goal" as originally stated —
+automatic, zero manual input, zero accounts. Per "Future path" below, this
+doesn't discard phase 1's work; it adds a better discovery path alongside it.
+
+## Phase 1 plan: the one-time code UI
+
+**Approach A chosen** over an explicit Host/Join button pair: symmetric, no
+up-front role decision. The moment the page loads, a short code is generated and
+shown persistently on screen (alongside a brief "connecting…" state until PeerJS
+confirms the ID with its broker), next to an input box + button for entering the
+*other* player's code. Whichever human types is a real-world decision between the
+two players, not something the UI forces a choice about. A fresh code is
+generated every page load — this is session-scoped, not any kind of persistent
+identity or account.
+
+Code generation mechanics: a short, human-typeable ID (not PeerJS's default
+UUID-style one) is generated client-side and passed to `new Peer(shortCode)`.
+Since PeerJS's public broker is one global namespace shared by everyone using it
+(not scoped to a LAN at all), a short code can collide with someone else's
+in-progress session — PeerJS surfaces that as an `unavailable-id` error, handled
+by generating a new random code and retrying.
+
+**Split into separate entity components**, following the existing Input-vs-logic
+split already used elsewhere in this codebase (e.g.
+`EntityComponentCameraControllerFirstPersonInput` /
+`EntityComponentCameraControllerFirstPerson`, `EntityComponentPlayerControllerInput`
+/ `EntityComponentPlayerController`):
+
+- A **connection-owning component**: owns the `Peer` instance and its lifecycle,
+  generates/retries the short code, and exposes connection state for other
+  components to read/react to. No DOM/UI of its own.
+- A separate **HUD/UI component**: owns the plain DOM elements (a label showing
+  the local code, an input + button for entering the remote code), reading from
+  the connection component rather than owning a `Peer` itself — mirroring how
+  `EntityComponentButtonPointerLock` (`entity components/test_objects.js`)
+  already builds a plain DOM button and appends it to `document.body`.
+
+**Browser-only visibility.** This code-entry HUD is specifically the "browser
+strategy" half of the swappable `NetworkDiscovery`-style abstraction described in
+"Future path" below — once a native PC build exists (native broadcast discovery,
+phase 2), there is nothing to type and no code to show, so this HUD must not
+appear there at all. This should be a decision made once at startup about
+whether to *mount* the component in the first place, not a CSS visibility toggle
+on an otherwise-active component. Detection mechanism: check for a native bridge
+global that only exists inside the wrapped shell (e.g. an `window.electronAPI`
+exposed by an Electron preload script, or Tauri's `window.__TAURI__`) — its
+presence means "running inside the native shell, skip this component entirely";
+its absence means "plain browser, mount it as normal."
 
 ## Future path: intermingling PeerJS with native sockets (Electron/Tauri, Capacitor)
 
