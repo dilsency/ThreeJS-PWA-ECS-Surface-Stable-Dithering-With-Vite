@@ -289,16 +289,21 @@ by generating a new random code and retrying.
 split already used elsewhere in this codebase (e.g.
 `EntityComponentCameraControllerFirstPersonInput` /
 `EntityComponentCameraControllerFirstPerson`, `EntityComponentPlayerControllerInput`
-/ `EntityComponentPlayerController`):
-
-- A **connection-owning component**: owns the `Peer` instance and its lifecycle,
-  generates/retries the short code, and exposes connection state for other
-  components to read/react to. No DOM/UI of its own.
-- A separate **HUD/UI component**: owns the plain DOM elements (a label showing
-  the local code, an input + button for entering the remote code), reading from
-  the connection component rather than owning a `Peer` itself — mirroring how
-  `EntityComponentButtonPointerLock` (`entity components/test_objects.js`)
-  already builds a plain DOM button and appends it to `document.body`.
+/ `EntityComponentPlayerController`). Implemented in
+`entity components/peer_connection.js` as `EntityComponentPeerConnection` (owns
+the `Peer` instance/lifecycle, generates/retries the short code, exposes
+connection state for other components to read/react to, no DOM/UI of its own —
+currently using a hardcoded fake id, with the real PeerJS implementation written
+out but commented out until PeerJS is actually added as a dependency; see
+`DEPENDENCY_LOADING_CDN_VS_NPM.md` for that decision) and
+`EntityComponentPeerConnectionUI` (owns the plain DOM elements — a label showing
+the local code, an input + button for entering the remote code — reading from
+`EntityComponentPeerConnection` rather than owning a `Peer` itself, mirroring how
+`EntityComponentButtonPointerLock` in `entity components/test_objects.js` already
+builds a plain DOM button and appends it to `document.body`; named "...UI" rather
+than "...HUD" to avoid confusion with this project's existing `sceneHUD`/
+`EntityComponentTestCubeHUD` terminology, which refers to the separate Three.js
+overlay scene, not a plain DOM overlay).
 
 **Browser-only visibility.** This code-entry HUD is specifically the "browser
 strategy" half of the swappable `NetworkDiscovery`-style abstraction described in

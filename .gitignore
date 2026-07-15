@@ -1,5 +1,6 @@
 /node_modules/.bin
 /node_modules
+.DS_Store
 eslint.config.js
 dist/assets/index-B-mh6UNm.js
 dist/assets/manifest-BjHEUg24.json

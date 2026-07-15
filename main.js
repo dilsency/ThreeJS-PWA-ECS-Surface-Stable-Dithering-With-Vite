@@ -22,6 +22,8 @@ import {EntityComponentBackgroundPlane} from "./entity components/test_objects.j
 import {EntityComponentButtonPointerLock} from "./entity components/test_objects.js";
 import {EntityComponentDirectionalLight} from "./entity components/lighting.js";
 import {EntityComponentLightManager} from "./entity components/lighting.js";
+import {EntityComponentPeerConnection} from "./entity components/peer_connection.js";
+import {EntityComponentPeerConnectionUI} from "./entity components/peer_connection.js";
 
 // bare minimum
 var scene;
@@ -222,6 +224,17 @@ function init()
             // side, not its far side — see EntityComponentLightManager's field comment.
             reverseDirection:true,
         }));
+
+        //
+        // LAN multiplayer, phase 1 (see LAN_MULTIPLAYER_CONSIDERATIONS.md): the
+        // manual one-time code UI. EntityComponentPeerConnection currently uses a
+        // fake id/no real PeerJS connection; EntityComponentPeerConnectionUI reads
+        // from it via the usual sibling lookup and won't mount its DOM at all when
+        // run inside a future native (Electron/Tauri) build.
+        const entityMultiplayer = new Entity(null);
+        entityManager.methodAddEntity(entityMultiplayer, "multiplayer");
+        entityMultiplayer.methodAddComponentWithName("EntityComponentPeerConnection", new EntityComponentPeerConnection());
+        entityMultiplayer.methodAddComponentWithName("EntityComponentPeerConnectionUI", new EntityComponentPeerConnectionUI());
     }
 
     //

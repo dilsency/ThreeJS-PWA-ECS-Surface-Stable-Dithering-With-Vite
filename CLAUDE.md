@@ -22,6 +22,8 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.m
 
 This is deliberate and repeated verbatim (with a commented-out `// import * as THREE from "three";` alternative) at the top of every module that touches Three.js. When adding a new file that needs THREE, copy this exact import line rather than adding `three` to `package.json`. The bare specifier `"three"` is kept alive only via the commented-out import map in `index.html` and aliases in `.vite/vite.config.js` — an alternate/duplicate Vite config not used by the actual build (the real one is the top-level `vite.config.js`).
 
+Before adding any *new* runtime dependency (npm-installed or CDN), read `DEPENDENCY_LOADING_CDN_VS_NPM.md` — it covers the CDN-vs-npm tradeoff in depth, including the PWA/service-worker/GitHub-Pages reasoning behind this pattern, so that decision doesn't need to be re-litigated from scratch each time.
+
 ### ECS layer (`classes/ECS/`)
 
 A minimal, hand-rolled entity-component-system, not a library:
